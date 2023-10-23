@@ -4,9 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 const back4AppBaseUrl = 'https://parseapi.back4app.com/classes/contatos';
 
-void main() {
+void main() async {
+  await dotenv.load();
   runApp(MyApp());
 }
 
@@ -74,9 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final name = _nameController.text;
                 final phone = _phoneController.text;
 
-                if (name.isNotEmpty && phone.isNotEmpty) {
-                  //&& _image != null
-                  createContactInBack4App(name, phone, ''); //(_image!.path) ??
+                if (name.isNotEmpty && phone.isNotEmpty && _image != null) {
+                  createContactInBack4App(name, phone, _image!.path);
                 } else {
                   _errorMessage = "Preencha todos os campos e capture uma foto";
                   setState(() {});
@@ -104,17 +106,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> createContactInBack4App(
       String name, String phone, String imagePath) async {
     final url = Uri.parse(back4AppBaseUrl);
-    final request = http.MultipartRequest('POST', url)
-      ..headers['X-Parse-Application-Id'] =
-          '' // Substitua pelo ID do seu aplicativo
-      ..headers['X-Parse-REST-API-Key'] =
-          '' // Substitua pela chave de API REST do seu aplicativo
-      ..fields['name'] = name
-      ..fields['phone'] = phone
-      ..fields['imagePath'] = imagePath;
-    //..files.add(await http.MultipartFile.fromPath('image', imagePath))
-
-    final response = await request.send();
+    final response = await http.post(
+      url,
+      headers: {
+        'X-Parse-Application-Id': dotenv.env['API_BACK4APPS_ID'].toString(),
+        'X-Parse-REST-API-Key': dotenv.env['API_BACK4APPS_KEY'].toString(),
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'name': name,
+        'phone': phone,
+        'imagePath': imagePath,
+      }),
+    );
 
     if (response.statusCode == 201) {
       _response = "Contato cadastrado com sucesso";
@@ -122,8 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       _errorMessage = "Erro ao cadastrar contato";
       setState(() {});
-      print(
-          'Erro ao enviar contato para o Back4App: ${await response.stream.bytesToString()}');
+      print('Erro ao enviar contato para o Back4App: ${response.body}');
     }
   }
 }
@@ -156,8 +159,7 @@ class _ListContactsScreenState extends State<ListContactsScreen> {
             title: Text('Nome: ${contact['name']}'),
             subtitle: Text('Telefone: ${contact['phone']}'),
             leading: CircleAvatar(
-              backgroundImage: NetworkImage(//contact['image']['url']
-                  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgOfgjZmIV5tQh_tD7ROPzK--kQhFyqo-tR_cz65aUQA&s'),
+              backgroundImage: FileImage(File(contact['imagePath'])),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -192,9 +194,8 @@ class _ListContactsScreenState extends State<ListContactsScreen> {
     final response = await http.get(
       url,
       headers: {
-        'X-Parse-Application-Id': '', // Substitua pelo ID do seu aplicativo
-        'X-Parse-REST-API-Key':
-            '', // Substitua pela chave de API REST do seu aplicativo
+        'X-Parse-Application-Id': dotenv.env['API_BACK4APPS_ID'].toString(),
+        'X-Parse-REST-API-Key': dotenv.env['API_BACK4APPS_KEY'].toString(),
       },
     );
 
@@ -212,9 +213,8 @@ class _ListContactsScreenState extends State<ListContactsScreen> {
     final response = await http.delete(
       url,
       headers: {
-        'X-Parse-Application-Id': '', // Substitua pelo ID do seu aplicativo
-        'X-Parse-REST-API-Key':
-            '', // Substitua pela chave de API REST do seu aplicativo
+        'X-Parse-Application-Id': dotenv.env['API_BACK4APPS_ID'].toString(),
+        'X-Parse-REST-API-Key': dotenv.env['API_BACK4APPS_KEY'].toString(),
       },
     );
 
@@ -291,10 +291,8 @@ class _EditContactScreenState extends State<EditContactScreen> {
     final response = await http.put(
       url,
       headers: {
-        'X-Parse-Application-Id': '', // Substitua pelo ID do seu aplicativo
-        'X-Parse-REST-API-Key':
-            '', // Substitua pela chave de API REST do seu aplicativo
-        'Content-Type': 'application/json',
+        'X-Parse-Application-Id': dotenv.env['API_BACK4APPS_ID'].toString(),
+        'X-Parse-REST-API-Key': dotenv.env['API_BACK4APPS_KEY'].toString(),
       },
       body: json.encode({
         'name': name,
